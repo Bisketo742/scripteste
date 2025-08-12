@@ -1,0 +1,107 @@
+
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+
+if playerGui:FindFirstChild("BiskHub") then
+    playerGui.BiskHub:Destroy()
+end
+
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BiskHub"
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 140)
+frame.Position = UDim2.new(0, 16, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(36,36,36)
+frame.BorderSizePixel = 0
+frame.Name = "MainFrame"
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Text = "BiskHub"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 28
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(1, 0, 0, 34)
+title.Parent = frame
+
+
+local collectBtn = Instance.new("TextButton")
+collectBtn.Text = "Auto Coletar Itens [Desligado]"
+collectBtn.Size = UDim2.new(1, -24, 0, 40)
+collectBtn.Position = UDim2.new(0, 12, 0, 40)
+collectBtn.BackgroundColor3 = Color3.fromRGB(60,130,255)
+collectBtn.TextColor3 = Color3.fromRGB(255,255,255)
+collectBtn.Font = Enum.Font.SourceSansSemibold
+collectBtn.TextSize = 22
+collectBtn.Parent = frame
+
+
+local fishBtn = Instance.new("TextButton")
+fishBtn.Text = "Auto Pescar [Desligado]"
+fishBtn.Size = UDim2.new(1, -24, 0, 40)
+fishBtn.Position = UDim2.new(0, 12, 0, 90)
+fishBtn.BackgroundColor3 = Color3.fromRGB(60,200,130)
+fishBtn.TextColor3 = Color3.fromRGB(255,255,255)
+fishBtn.Font = Enum.Font.SourceSansSemibold
+fishBtn.TextSize = 22
+fishBtn.Parent = frame
+
+
+local autoCollect = false
+local autoFish = false
+
+
+local function autoCollectItems()
+    while autoCollect do
+        local character = player.Character or player.CharacterAdded:Wait()
+        local map = workspace:FindFirstChild("Map") or workspace
+        for _, item in pairs(map:GetDescendants()) do
+            if item:IsA("TouchTransmitter") and item.Parent then
+                firetouchinterest(character.HumanoidRootPart, item.Parent, 0)
+                task.wait(0.1)
+                firetouchinterest(character.HumanoidRootPart, item.Parent, 1)
+            end
+        end
+        task.wait(1)
+    end
+end
+
+
+local function autoFishFunc()
+    while autoFish do
+        local fishButton = player.PlayerGui:FindFirstChild("Fish", true)
+        if fishButton and fishButton:IsA("TextButton") then
+            fishButton:Activate()
+        end
+        -- RemoteEvent exemplo:
+        -- local fishEvent = game.ReplicatedStorage:FindFirstChild("Fish")
+        -- if fishEvent and fishEvent:IsA("RemoteEvent") then
+        --    fishEvent:FireServer()
+        -- end
+        task.wait(2)
+    end
+end
+
+
+collectBtn.MouseButton1Click:Connect(function()
+    autoCollect = not autoCollect
+    collectBtn.Text = "Auto Coletar Itens [" .. (autoCollect and "Ligado" or "Desligado") .. "]"
+    if autoCollect then
+        spawn(autoCollectItems)
+    end
+end)
+
+
+fishBtn.MouseButton1Click:Connect(function()
+    autoFish = not autoFish
+    fishBtn.Text = "Auto Pescar [" .. (autoFish and "Ligado" or "Desligado") .. "]"
+    if autoFish then
+        spawn(autoFishFunc)
+    end
+end)
