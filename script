@@ -1,17 +1,27 @@
 
-
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-
+local UIS = game:GetService("UserInputService")
 
 if playerGui:FindFirstChild("BiskHub") then
     playerGui.BiskHub:Destroy()
 end
 
-
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BiskHub"
 screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+
+
+local IconImage = Instance.new("ImageButton")
+IconImage.Name = "BiskHubIcon"
+IconImage.Image = "rbxassetid://17237307609" -- Ícone padrão (Roblox Hub)
+IconImage.Size = UDim2.new(0, 48, 0, 48)
+IconImage.Position = UDim2.new(0, 20, 0, 20)
+IconImage.BackgroundTransparency = 1
+IconImage.Visible = false
+IconImage.Parent = screenGui
+
 
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 140)
@@ -19,7 +29,17 @@ frame.Position = UDim2.new(0, 16, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(36,36,36)
 frame.BorderSizePixel = 0
 frame.Name = "MainFrame"
+frame.Active = true
+frame.Draggable = true -- Permite mover (modo simples, pode ser melhorado abaixo)
 frame.Parent = screenGui
+
+
+local dragBar = Instance.new("Frame")
+dragBar.Size = UDim2.new(1, 0, 0, 34)
+dragBar.BackgroundColor3 = Color3.fromRGB(26,26,26)
+dragBar.BorderSizePixel = 0
+dragBar.Name = "DragBar"
+dragBar.Parent = frame
 
 local title = Instance.new("TextLabel")
 title.Text = "BiskHub"
@@ -27,9 +47,20 @@ title.Font = Enum.Font.SourceSansBold
 title.TextSize = 28
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, 0, 0, 34)
-title.Parent = frame
+title.Size = UDim2.new(1, 0, 1, 0)
+title.Parent = dragBar
 
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Text = "✕"
+closeBtn.Size = UDim2.new(0, 32, 0, 32)
+closeBtn.Position = UDim2.new(1, -36, 0, 2)
+closeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.TextSize = 20
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = dragBar
 
 local collectBtn = Instance.new("TextButton")
 collectBtn.Text = "Auto Coletar Itens [Desligado]"
@@ -41,7 +72,6 @@ collectBtn.Font = Enum.Font.SourceSansSemibold
 collectBtn.TextSize = 22
 collectBtn.Parent = frame
 
-
 local fishBtn = Instance.new("TextButton")
 fishBtn.Text = "Auto Pescar [Desligado]"
 fishBtn.Size = UDim2.new(1, -24, 0, 40)
@@ -52,56 +82,139 @@ fishBtn.Font = Enum.Font.SourceSansSemibold
 fishBtn.TextSize = 22
 fishBtn.Parent = frame
 
-
 local autoCollect = false
 local autoFish = false
 
 
+local function mouse1click()
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    VirtualInputManager:SendMouseButtonEvent(
+        workspace.CurrentCamera.ViewportSize.X/2,
+        workspace.CurrentCamera.ViewportSize.Y/2,
+        0, -- botão esquerdo
+        true,
+        game,
+        0
+    )
+    task.wait(0.05)
+    VirtualInputManager:SendMouseButtonEvent(
+        workspace.CurrentCamera.ViewportSize.X/2,
+        workspace.CurrentCamera.ViewportSize.Y/2,
+        0,
+        false,
+        game,
+        0
+    )
+end
+
 local function autoCollectItems()
     while autoCollect do
         local character = player.Character or player.CharacterAdded:Wait()
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if not hrp then task.wait(1) continue end
         local map = workspace:FindFirstChild("Map") or workspace
-        for _, item in pairs(map:GetDescendants()) do
-            if item:IsA("TouchTransmitter") and item.Parent then
-                firetouchinterest(character.HumanoidRootPart, item.Parent, 0)
-                task.wait(0.1)
-                firetouchinterest(character.HumanoidRootPart, item.Parent, 1)
+        for _, obj in ipairs(map:GetDescendants()) do
+            if obj:IsA("TouchTransmitter") and obj.Parent then
+                pcall(function()
+                    firetouchinterest(hrp, obj.Parent, 0)
+                    task.wait(0.05)
+                    firetouchinterest(hrp, obj.Parent, 1)
+                end)
+            elseif obj.Name:lower():find("item") or obj.Name:lower():find("drop") then
+                if obj:IsA("BasePart") then
+                    pcall(function()
+                        firetouchinterest(hrp, obj, 0)
+                        task.wait(0.05)
+                        firetouchinterest(hrp, obj, 1)
+                    end)
+                end
             end
         end
         task.wait(1)
     end
 end
 
-
 local function autoFishFunc()
     while autoFish do
-        local fishButton = player.PlayerGui:FindFirstChild("Fish", true)
-        if fishButton and fishButton:IsA("TextButton") then
-            fishButton:Activate()
+        local found = false
+        for _, gui in ipairs(playerGui:GetDescendants()) do
+            if gui:IsA("Frame") and (gui.Name:lower():find("bar") or gui.Name:lower():find("fish")) and gui.Visible then
+                found = true
+                mouse1click()
+                break
+            end
+            if gui:IsA("TextButton") and (gui.Name:lower():find("fish") or gui.Name:lower():find("catch")) and gui.Visible then
+                found = true
+                pcall(function()
+                    gui:Activate()
+                end)
+                break
+            end
         end
-        -- RemoteEvent exemplo:
-        -- local fishEvent = game.ReplicatedStorage:FindFirstChild("Fish")
-        -- if fishEvent and fishEvent:IsA("RemoteEvent") then
-        --    fishEvent:FireServer()
-        -- end
-        task.wait(2)
+        if not found then
+            task.wait(0.5)
+        else
+            task.wait(0.1)
+        end
     end
 end
-
 
 collectBtn.MouseButton1Click:Connect(function()
     autoCollect = not autoCollect
     collectBtn.Text = "Auto Coletar Itens [" .. (autoCollect and "Ligado" or "Desligado") .. "]"
     if autoCollect then
-        spawn(autoCollectItems)
+        task.spawn(autoCollectItems)
     end
 end)
-
 
 fishBtn.MouseButton1Click:Connect(function()
     autoFish = not autoFish
     fishBtn.Text = "Auto Pescar [" .. (autoFish and "Ligado" or "Desligado") .. "]"
     if autoFish then
-        spawn(autoFishFunc)
+        task.spawn(autoFishFunc)
     end
+end)
+
+
+do
+    local dragging, dragInput, dragStart, startPos
+    dragBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    dragBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+
+closeBtn.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    IconImage.Visible = true
+end)
+
+
+IconImage.MouseButton1Click:Connect(function()
+    frame.Visible = true
+    IconImage.Visible = false
 end)
