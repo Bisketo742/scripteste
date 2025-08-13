@@ -1,4 +1,4 @@
--- BiskHub com mover, esconder, ícone, auto coletar e pesca inteligente (pointer/radar)
+
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -13,7 +13,7 @@ screenGui.Name = "BiskHub"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
 
--- Ícone para reabrir a Hub
+
 local IconImage = Instance.new("ImageButton")
 IconImage.Name = "BiskHubIcon"
 IconImage.Image = "rbxassetid://17237307609"
@@ -24,7 +24,7 @@ IconImage.Visible = false
 IconImage.ZIndex = 20 -- Garantir que fica acima das outras GUIs
 IconImage.Parent = screenGui
 
--- Main Frame (Hub)
+
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 140)
 frame.Position = UDim2.new(0, 16, 0, 100)
@@ -36,7 +36,7 @@ frame.Draggable = true
 frame.ZIndex = 10
 frame.Parent = screenGui
 
--- Área de arrasto
+
 local dragBar = Instance.new("Frame")
 dragBar.Size = UDim2.new(1, 0, 0, 34)
 dragBar.BackgroundColor3 = Color3.fromRGB(26,26,26)
@@ -55,7 +55,7 @@ title.Size = UDim2.new(1, 0, 1, 0)
 title.ZIndex = 12
 title.Parent = dragBar
 
--- Botão de fechar
+
 local closeBtn = Instance.new("TextButton")
 closeBtn.Text = "✕"
 closeBtn.Size = UDim2.new(0, 32, 0, 32)
@@ -93,7 +93,7 @@ fishBtn.Parent = frame
 local autoCollect = false
 local autoFish = false
 
--- Função para simular mouse hold
+
 local mouseHeld = false
 local function holdMouse(x, y)
     if not mouseHeld then
@@ -108,9 +108,7 @@ local function releaseMouse(x, y)
     end
 end
 
--- =======================
--- AUTO PESCA INTELIGENTE (pointer e radar)
--- =======================
+
 local function autoFishFunc()
     while autoFish do
         local pointer, radar
@@ -143,9 +141,7 @@ local function autoFishFunc()
     releaseMouse(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
 end
 
--- ===========================
--- AUTO COLETAR ITENS (BÁSICO)
--- ===========================
+
 local function autoCollectItems()
     while autoCollect do
         local character = player.Character or player.CharacterAdded:Wait()
@@ -180,7 +176,7 @@ fishBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Função para mover o frame com o mouse (dragBar)
+
 do
     local dragging, dragInput, dragStart, startPos
     dragBar.InputBegan:Connect(function(input)
@@ -212,7 +208,7 @@ do
     end)
 end
 
--- Esconder Hub e mostrar ícone
+
 closeBtn.MouseButton1Click:Connect(function()
     frame.Visible = false
     IconImage.Visible = true
