@@ -1,7 +1,8 @@
-
+-- BiskHub com mover, esconder, ícone, auto coletar e pesca inteligente (pointer/radar)
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 if playerGui:FindFirstChild("BiskHub") then
     playerGui.BiskHub:Destroy()
@@ -12,17 +13,18 @@ screenGui.Name = "BiskHub"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
 
-
+-- Ícone para reabrir a Hub
 local IconImage = Instance.new("ImageButton")
 IconImage.Name = "BiskHubIcon"
-IconImage.Image = "rbxassetid://17237307609" -- Ícone padrão (Roblox Hub)
+IconImage.Image = "rbxassetid://17237307609"
 IconImage.Size = UDim2.new(0, 48, 0, 48)
 IconImage.Position = UDim2.new(0, 20, 0, 20)
 IconImage.BackgroundTransparency = 1
 IconImage.Visible = false
+IconImage.ZIndex = 20 -- Garantir que fica acima das outras GUIs
 IconImage.Parent = screenGui
 
-
+-- Main Frame (Hub)
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 140)
 frame.Position = UDim2.new(0, 16, 0, 100)
@@ -30,15 +32,17 @@ frame.BackgroundColor3 = Color3.fromRGB(36,36,36)
 frame.BorderSizePixel = 0
 frame.Name = "MainFrame"
 frame.Active = true
-frame.Draggable = true -- Permite mover (modo simples, pode ser melhorado abaixo)
+frame.Draggable = true
+frame.ZIndex = 10
 frame.Parent = screenGui
 
-
+-- Área de arrasto
 local dragBar = Instance.new("Frame")
 dragBar.Size = UDim2.new(1, 0, 0, 34)
 dragBar.BackgroundColor3 = Color3.fromRGB(26,26,26)
 dragBar.BorderSizePixel = 0
 dragBar.Name = "DragBar"
+dragBar.ZIndex = 11
 dragBar.Parent = frame
 
 local title = Instance.new("TextLabel")
@@ -48,9 +52,10 @@ title.TextSize = 28
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.BackgroundTransparency = 1
 title.Size = UDim2.new(1, 0, 1, 0)
+title.ZIndex = 12
 title.Parent = dragBar
 
-
+-- Botão de fechar
 local closeBtn = Instance.new("TextButton")
 closeBtn.Text = "✕"
 closeBtn.Size = UDim2.new(0, 32, 0, 32)
@@ -60,6 +65,7 @@ closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
 closeBtn.Font = Enum.Font.SourceSansBold
 closeBtn.TextSize = 20
 closeBtn.BorderSizePixel = 0
+closeBtn.ZIndex = 13
 closeBtn.Parent = dragBar
 
 local collectBtn = Instance.new("TextButton")
@@ -70,6 +76,7 @@ collectBtn.BackgroundColor3 = Color3.fromRGB(60,130,255)
 collectBtn.TextColor3 = Color3.fromRGB(255,255,255)
 collectBtn.Font = Enum.Font.SourceSansSemibold
 collectBtn.TextSize = 22
+collectBtn.ZIndex = 11
 collectBtn.Parent = frame
 
 local fishBtn = Instance.new("TextButton")
@@ -80,82 +87,80 @@ fishBtn.BackgroundColor3 = Color3.fromRGB(60,200,130)
 fishBtn.TextColor3 = Color3.fromRGB(255,255,255)
 fishBtn.Font = Enum.Font.SourceSansSemibold
 fishBtn.TextSize = 22
+fishBtn.ZIndex = 11
 fishBtn.Parent = frame
 
 local autoCollect = false
 local autoFish = false
 
-
-local function mouse1click()
-    local VirtualInputManager = game:GetService("VirtualInputManager")
-    VirtualInputManager:SendMouseButtonEvent(
-        workspace.CurrentCamera.ViewportSize.X/2,
-        workspace.CurrentCamera.ViewportSize.Y/2,
-        0, -- botão esquerdo
-        true,
-        game,
-        0
-    )
-    task.wait(0.05)
-    VirtualInputManager:SendMouseButtonEvent(
-        workspace.CurrentCamera.ViewportSize.X/2,
-        workspace.CurrentCamera.ViewportSize.Y/2,
-        0,
-        false,
-        game,
-        0
-    )
+-- Função para simular mouse hold
+local mouseHeld = false
+local function holdMouse(x, y)
+    if not mouseHeld then
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+        mouseHeld = true
+    end
+end
+local function releaseMouse(x, y)
+    if mouseHeld then
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+        mouseHeld = false
+    end
 end
 
+-- =======================
+-- AUTO PESCA INTELIGENTE (pointer e radar)
+-- =======================
+local function autoFishFunc()
+    while autoFish do
+        local pointer, radar
+        for _, gui in ipairs(playerGui:GetDescendants()) do
+            if gui:IsA("Frame") and gui.Name:lower() == "pointer" and gui.Visible then
+                pointer = gui
+            elseif gui:IsA("Frame") and gui.Name:lower() == "radar" and gui.Visible then
+                radar = gui
+            end
+        end
+        if pointer and radar then
+            local pointerY = pointer.AbsolutePosition.Y + pointer.AbsoluteSize.Y/2
+            local radarTop = radar.AbsolutePosition.Y
+            local radarBottom = radar.AbsolutePosition.Y + radar.AbsoluteSize.Y
+            local screenX = pointer.AbsolutePosition.X + pointer.AbsoluteSize.X/2
+            local screenY = pointerY
+
+            if pointerY < radarTop then
+                holdMouse(screenX, screenY) -- Segure para subir
+            elseif pointerY > radarBottom then
+                releaseMouse(screenX, screenY) -- Solte para descer
+            else
+                holdMouse(screenX, screenY) -- Dentro da barra, tente manter pressionado para estabilizar
+            end
+        else
+            releaseMouse(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
+        end
+        task.wait(0.02)
+    end
+    releaseMouse(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
+end
+
+-- ===========================
+-- AUTO COLETAR ITENS (BÁSICO)
+-- ===========================
 local function autoCollectItems()
     while autoCollect do
         local character = player.Character or player.CharacterAdded:Wait()
         local hrp = character:FindFirstChild("HumanoidRootPart")
         if not hrp then task.wait(1) continue end
-        local map = workspace:FindFirstChild("Map") or workspace
-        for _, obj in ipairs(map:GetDescendants()) do
-            if obj:IsA("TouchTransmitter") and obj.Parent then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and (obj.Name:lower():find("item") or obj.Name:lower():find("drop") or obj.Name:lower():find("orb")) then
                 pcall(function()
-                    firetouchinterest(hrp, obj.Parent, 0)
+                    firetouchinterest(hrp, obj, 0)
                     task.wait(0.05)
-                    firetouchinterest(hrp, obj.Parent, 1)
+                    firetouchinterest(hrp, obj, 1)
                 end)
-            elseif obj.Name:lower():find("item") or obj.Name:lower():find("drop") then
-                if obj:IsA("BasePart") then
-                    pcall(function()
-                        firetouchinterest(hrp, obj, 0)
-                        task.wait(0.05)
-                        firetouchinterest(hrp, obj, 1)
-                    end)
-                end
             end
         end
         task.wait(1)
-    end
-end
-
-local function autoFishFunc()
-    while autoFish do
-        local found = false
-        for _, gui in ipairs(playerGui:GetDescendants()) do
-            if gui:IsA("Frame") and (gui.Name:lower():find("bar") or gui.Name:lower():find("fish")) and gui.Visible then
-                found = true
-                mouse1click()
-                break
-            end
-            if gui:IsA("TextButton") and (gui.Name:lower():find("fish") or gui.Name:lower():find("catch")) and gui.Visible then
-                found = true
-                pcall(function()
-                    gui:Activate()
-                end)
-                break
-            end
-        end
-        if not found then
-            task.wait(0.5)
-        else
-            task.wait(0.1)
-        end
     end
 end
 
@@ -175,7 +180,7 @@ fishBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-
+-- Função para mover o frame com o mouse (dragBar)
 do
     local dragging, dragInput, dragStart, startPos
     dragBar.InputBegan:Connect(function(input)
@@ -207,14 +212,16 @@ do
     end)
 end
 
-
+-- Esconder Hub e mostrar ícone
 closeBtn.MouseButton1Click:Connect(function()
     frame.Visible = false
     IconImage.Visible = true
+    print("Ícone ativado!") -- Debug
 end)
 
-
+-- Ao clicar no ícone, volta a exibir a Hub
 IconImage.MouseButton1Click:Connect(function()
     frame.Visible = true
     IconImage.Visible = false
+    print("Hub reaberta pelo ícone!") -- Debug
 end)
